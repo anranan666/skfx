@@ -1,0 +1,467 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+<meta name="color-scheme" content="dark" />
+<meta name="theme-color" content="#05070c" />
+<title>深空防线 · 摄像头手势互动游戏</title>
+<link rel="stylesheet" href="css/style.css" />
+</head>
+<body>
+<div class="page">
+
+  <!-- ================= 氛围层：极光 + 网格 + 星点 ================= -->
+  <div class="ambient" aria-hidden="true">
+    <span class="aurora aurora-a"></span>
+    <span class="aurora aurora-b"></span>
+    <span class="aurora aurora-c"></span>
+    <span class="haze-grid"></span>
+    <span class="haze-stars"></span>
+  </div>
+
+  <div class="app">
+
+    <!-- ================= 顶栏 ================= -->
+    <header class="app-header">
+      <div class="brand">
+        <span class="brand-mark" aria-hidden="true">
+          <svg viewBox="0 0 32 32" fill="none">
+            <circle cx="16" cy="16" r="14" stroke="url(#ringGrad)" stroke-width="1.2" opacity=".55"/>
+            <circle cx="16" cy="16" r="9" stroke="url(#ringGrad)" stroke-width=".8" opacity=".28"/>
+            <circle cx="16" cy="16" r="3.4" fill="url(#starGrad)"/>
+            <circle cx="16" cy="16" r="6.6" stroke="url(#starGrad)" stroke-width="1" stroke-dasharray="2 4" opacity=".8"/>
+            <defs>
+              <linearGradient id="ringGrad" x1="0" y1="0" x2="32" y2="32">
+                <stop offset="0" stop-color="#bcd4ff"/><stop offset="1" stop-color="#6f8cb8"/>
+              </linearGradient>
+              <linearGradient id="starGrad" x1="6" y1="6" x2="26" y2="26">
+                <stop offset="0" stop-color="#fff2d8"/><stop offset="1" stop-color="#f3c87e"/>
+              </linearGradient>
+            </defs>
+          </svg>
+        </span>
+        <div class="brand-text">
+          <h1>深空防线</h1>
+          <p>Deep Field<i>·</i>Gesture Defense Protocol</p>
+        </div>
+      </div>
+
+      <div class="header-meta">
+        <span class="meta-pill"><b>LOCAL</b>画面不上传</span>
+        <span class="meta-pill"><b>MK·III</b>MediaPipe Hands</span>
+      </div>
+
+      <div class="status" id="status">
+        <span class="dot"></span>
+        <span id="status-text">视觉引擎加载中…</span>
+      </div>
+    </header>
+
+    <!-- ================= 舞台 ================= -->
+    <main class="stage">
+
+      <div class="stage-head">
+        <div class="eyebrow">
+          <span class="eyebrow-num">01</span>
+          <span class="eyebrow-line" aria-hidden="true"></span>
+          <span class="eyebrow-text">Live Deck · 实时战况</span>
+        </div>
+        <div class="stage-meta">
+          <span>5 waves</span>
+          <span class="sep" aria-hidden="true"></span>
+          <span>3 abilities</span>
+          <span class="sep" aria-hidden="true"></span>
+          <span class="accent">1 core to hold</span>
+        </div>
+      </div>
+
+      <section class="board" id="board">
+        <canvas id="game"></canvas>
+
+        <!-- 取景框四角 -->
+        <div class="frame" aria-hidden="true">
+          <span></span><span></span><span></span><span></span>
+        </div>
+
+        <!-- ============ HUD 顶部：波次 / 得分 ============ -->
+        <div class="hud" id="hud">
+          <div class="wave-chip">
+            <div class="wave-top">
+              <span class="wave-no">WAVE <b id="hud-wave-no">01</b><i>/ 05</i></span>
+              <span class="wave-name" id="hud-wave-name">接触</span>
+              <span class="wave-time"><b id="hud-wave-time">20</b><i>s</i></span>
+            </div>
+            <span class="meter" aria-hidden="true"><i id="hud-wave-bar"></i></span>
+          </div>
+
+          <div class="score-box">
+            <span class="score-label">SCORE</span>
+            <strong class="score-value" id="hud-score">0</strong>
+            <span class="combo-chip" id="hud-combo-wrap">
+              <span>连击 <b id="hud-combo">0</b></span>
+              <i id="hud-mult">×1.00</i>
+            </span>
+          </div>
+        </div>
+
+        <!-- ============ 合约卡 ============ -->
+        <div class="contract-card" id="hud-contract">
+          <div class="contract-head">
+            <span>本波合约</span>
+            <b id="hud-contract-bonus">+150</b>
+          </div>
+          <strong class="contract-name" id="hud-contract-name">清道夫</strong>
+          <p class="contract-desc" id="hud-contract-desc">本波击破 14 个目标</p>
+          <div class="contract-meter"><i id="hud-contract-fill"></i></div>
+          <span class="contract-progress" id="hud-contract-progress">0 / 14</span>
+        </div>
+
+        <!-- ============ 生命体征 ============ -->
+        <div class="vitals" id="vitals">
+          <div class="vital vital-shield" id="vital-shield">
+            <div class="vital-row">
+              <span class="vital-label">星核护盾</span>
+              <span class="vital-value"><b id="hud-shield">100</b><i>%</i></span>
+            </div>
+            <span class="vital-bar"><i id="hud-shield-bar"></i></span>
+          </div>
+
+          <div class="vital vital-energy">
+            <div class="vital-row">
+              <span class="vital-label">能量</span>
+              <span class="vital-value"><b id="hud-energy">100</b></span>
+            </div>
+            <span class="vital-bar"><i id="hud-energy-bar"></i></span>
+          </div>
+
+          <div class="vital vital-nova">
+            <span class="vital-label">冲击波</span>
+            <span class="pips" id="hud-nova" aria-hidden="true"><i></i><i></i></span>
+          </div>
+        </div>
+
+        <!-- 动态提示条 -->
+        <div class="hint-strip" id="hud-hint"></div>
+
+        <!-- 摄像头预览 -->
+        <div class="preview off" id="preview">
+          <video id="cam" playsinline muted autoplay></video>
+          <canvas id="preview-canvas" width="168" height="126"></canvas>
+          <span class="preview-tag" id="gesture-tag" data-state="idle">等待手势</span>
+        </div>
+
+        <!-- 波次横幅 -->
+        <div class="banner" id="wave-banner">
+          <span class="banner-kicker" id="banner-kicker">WAVE 01</span>
+          <strong class="banner-title" id="banner-title">接触</strong>
+          <p class="banner-desc" id="banner-desc"></p>
+        </div>
+
+        <!-- ---------- 开始界面 ---------- -->
+        <div class="overlay" id="start-overlay">
+          <div class="overlay-rail" aria-hidden="true">
+            <span class="rail-left"><i></i>STANDBY · 等待部署</span>
+            <span class="rail-right">5 waves <b>·</b> 3 abilities <b>·</b> 1 core</span>
+          </div>
+
+          <div class="panel panel-start">
+
+            <!-- 左：手部关键点示意图 -->
+            <aside class="panel-visual" aria-hidden="true">
+              <div class="radar">
+                <span class="radar-ring r1"></span>
+                <span class="radar-ring r2"></span>
+                <span class="radar-ring r3"></span>
+                <span class="radar-cross"></span>
+                <span class="radar-sweep"></span>
+
+                <svg class="hand" viewBox="0 0 200 232" fill="none">
+                  <path d="M76 170 L80 132 L96 122 L112 125 L127 136 L129 170
+                           C128 185 116 193 102 193 C88 193 77 185 76 170 Z"
+                        fill="rgba(169,199,255,.07)"
+                        stroke="rgba(169,199,255,.30)"
+                        stroke-width="1.2" stroke-linejoin="round"/>
+                  <path d="M102 193 L102 208" stroke="rgba(169,199,255,.30)" stroke-width="1.2"/>
+
+                  <g stroke="rgba(169,199,255,.38)" stroke-width="1.3"
+                     stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M88 126 L86 102 L85 84 L85 66"/>
+                    <path d="M102 122 L102 96 L102 76 L102 58"/>
+                    <path d="M116 128 L118 104 L119 88 L120 72"/>
+                    <path d="M127 142 L131 124 L133 110 L135 96"/>
+                    <path d="M78 158 L64 142 L54 128 L50 118"/>
+                  </g>
+
+                  <g fill="rgba(198,218,255,.62)">
+                    <circle cx="88" cy="126" r="2.1"/><circle cx="102" cy="122" r="2.1"/>
+                    <circle cx="116" cy="128" r="2.1"/><circle cx="127" cy="142" r="2.1"/>
+                    <circle cx="78" cy="158" r="2.1"/>
+                    <circle cx="86" cy="102" r="2"/><circle cx="85" cy="84" r="2"/>
+                    <circle cx="102" cy="96" r="2"/><circle cx="102" cy="76" r="2"/>
+                    <circle cx="118" cy="104" r="2"/><circle cx="119" cy="88" r="2"/>
+                    <circle cx="131" cy="124" r="2"/><circle cx="133" cy="110" r="2"/>
+                    <circle cx="64" cy="142" r="2"/><circle cx="54" cy="128" r="2"/>
+                    <circle cx="102" cy="208" r="2.6"/>
+                  </g>
+
+                  <g fill="rgba(190,212,250,.5)">
+                    <circle cx="50" cy="118" r="2.9"/>
+                    <circle cx="102" cy="58" r="2.9"/>
+                    <circle cx="120" cy="72" r="2.9"/>
+                    <circle cx="135" cy="96" r="2.9"/>
+                  </g>
+                  <circle cx="85" cy="66" r="7.5" stroke="rgba(243,200,126,.5)"
+                          stroke-width="1" stroke-dasharray="2 3"/>
+                  <circle cx="85" cy="66" r="3.6" fill="#f0cf97"/>
+
+                  <g stroke="rgba(243,200,126,.42)" stroke-width=".9">
+                    <path d="M85 66 L76 40" stroke-dasharray="2 2.4"/>
+                  </g>
+                  <circle cx="76" cy="40" r="1.4" fill="rgba(243,200,126,.85)"/>
+                  <text x="76" y="32" class="kp-label kp-amber" text-anchor="middle">08 · index tip</text>
+
+                  <g stroke="rgba(164,139,255,.42)" stroke-width=".9">
+                    <path d="M102 208 L130 220" stroke-dasharray="2 2.4"/>
+                  </g>
+                  <circle cx="130" cy="220" r="1.4" fill="rgba(164,139,255,.85)"/>
+                  <text x="134" y="223" class="kp-label kp-violet" text-anchor="start">00 · wrist</text>
+                </svg>
+              </div>
+
+              <ul class="facts">
+                <li><b>5</b><span>递进波次</span></li>
+                <li><b>6</b><span>目标类型</span></li>
+                <li><b>3</b><span>可用能力</span></li>
+              </ul>
+            </aside>
+
+            <!-- 右：内容 -->
+            <div class="panel-body">
+              <span class="badge"><i></i>Gesture Defense</span>
+              <h2>守住星核，撑过五波</h2>
+              <p class="panel-desc">
+                <span class="desc-long">敌人从四周压向画面中心的星核。指尖是准星，捏合是火力，但能量有限、护盾会掉 —— 先打谁、用什么打、什么时候省，决定了你能撑到第几波。</span>
+                <span class="desc-short">指尖即准星。捏合开火，按住蓄能，张掌放冲击波 —— 守住中心的星核撑过五波。</span>
+              </p>
+
+              <ul class="rules">
+                <li>
+                  <span class="rule-icon" aria-hidden="true">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4">
+                      <circle cx="12" cy="12" r="6.4"/><circle cx="12" cy="12" r="1.4" fill="currentColor" stroke="none"/>
+                      <path d="M12 2.6v3M12 18.4v3M2.6 12h3M18.4 12h3" stroke-linecap="round"/>
+                    </svg>
+                  </span>
+                  <div><strong>食指瞄准</strong><p>指尖坐标即准星</p></div>
+                </li>
+                <li>
+                  <span class="rule-icon" aria-hidden="true">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4">
+                      <circle cx="8.6" cy="8.6" r="3.1"/><circle cx="15.4" cy="15.4" r="3.1"/>
+                      <path d="M11 11l2 2" stroke-linecap="round"/>
+                    </svg>
+                  </span>
+                  <div><strong>捏合 · 脉冲</strong><p>单体 1 伤害，耗能 6</p></div>
+                </li>
+                <li>
+                  <span class="rule-icon rule-icon-amber" aria-hidden="true">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4">
+                      <circle cx="12" cy="12" r="3.2"/>
+                      <path d="M12 3v3.4M12 17.6V21M3 12h3.4M17.6 12H21" stroke-linecap="round"/>
+                      <circle cx="12" cy="12" r="8.4" stroke-dasharray="2.6 3.6"/>
+                    </svg>
+                  </span>
+                  <div><strong>按住 · 蓄能炮</strong><p>范围 2 伤害，破甲穿透</p></div>
+                </li>
+                <li>
+                  <span class="rule-icon rule-icon-mint" aria-hidden="true">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4">
+                      <path d="M12 3.2v2.2M12 18.6v2.2M3.2 12h2.2M18.6 12h2.2M6 6l1.6 1.6M16.4 16.4L18 18M18 6l-1.6 1.6M7.6 16.4L6 18" stroke-linecap="round"/>
+                      <circle cx="12" cy="12" r="3.4"/>
+                    </svg>
+                  </span>
+                  <div><strong>张掌 · 冲击波</strong><p>推开并击伤，每波 1 次</p></div>
+                </li>
+                <li>
+                  <span class="rule-icon rule-icon-warn" aria-hidden="true">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4">
+                      <path d="M12 4.4l7.4 13.2H4.6z" stroke-linejoin="round"/>
+                      <path d="M12 9.6v3.6" stroke-linecap="round"/><circle cx="12" cy="15.8" r=".85" fill="currentColor" stroke="none"/>
+                    </svg>
+                  </span>
+                  <div><strong>别打灰色诱饵</strong><p>打错扣分、断连击</p></div>
+                </li>
+                <li>
+                  <span class="rule-icon rule-icon-violet" aria-hidden="true">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4">
+                      <path d="M12 21c-4.4 0-7.4-3-7.4-6.6 0-4.6 4.2-7 6.2-11 .4 3 3 4 4.6 6.2 1.2 1.6 1.8 3 1.8 4.8C17.2 18 15.8 21 12 21z"
+                            stroke-linejoin="round"/>
+                    </svg>
+                  </span>
+                  <div><strong>护盾归零即失守</strong><p>先杀感染体，再清杂兵</p></div>
+                </li>
+              </ul>
+
+              <div class="cam-alert hidden" id="cam-alert" role="alert">
+                <span class="cam-alert-icon" aria-hidden="true">
+                  <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6">
+                    <circle cx="10" cy="10" r="7.2"/>
+                    <path d="M10 6.4v4.4M10 13.4v.1" stroke-linecap="round"/>
+                  </svg>
+                </span>
+                <div class="cam-alert-body">
+                  <strong id="cam-alert-title">摄像头没有启动</strong>
+                  <p id="cam-alert-desc">浏览器没有给出授权窗口，可以直接用键鼠模式体验完整玩法。</p>
+                </div>
+                <button class="cam-alert-close" id="cam-alert-close" type="button" aria-label="关闭提示">×</button>
+              </div>
+
+              <div class="panel-actions">
+                <button class="btn btn-primary" id="btn-camera">
+                  <span>开启摄像头开始</span>
+                  <svg class="btn-arrow" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true">
+                    <path d="M4 10h11M10.5 5.5L15 10l-4.5 4.5" stroke-linecap="round" stroke-linejoin="round"/>
+                  </svg>
+                </button>
+                <button class="btn btn-ghost" id="btn-mouse">键鼠模式开局</button>
+              </div>
+
+              <div class="panel-foot">
+                <p class="privacy">
+                  <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3" aria-hidden="true">
+                    <rect x="3.2" y="7" width="9.6" height="6.6" rx="1.6"/>
+                    <path d="M5.6 7V5.4a2.4 2.4 0 0 1 4.8 0V7" stroke-linecap="round"/>
+                  </svg>
+                  画面仅在浏览器本地实时处理，不上传、不录制、不保存，可随时停止采集。
+                </p>
+                <p class="hint">键鼠：移动鼠标瞄准，左键点按开火、按住蓄能，空格放冲击波，P 暂停。</p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- ---------- 结算界面 ---------- -->
+        <div class="overlay hidden" id="over-overlay">
+          <div class="panel panel-result">
+            <span class="badge" id="res-badge"><i></i>Round Over</span>
+            <h2 id="res-title">星核失守</h2>
+            <p class="result-sub" id="res-sub">再来一次，先处理感染体。</p>
+
+            <div class="result-hero">
+              <span class="hero-glow" aria-hidden="true"></span>
+              <span class="result-hero-label">本局得分</span>
+              <strong class="result-hero-value" id="res-score">0</strong>
+              <span class="rank-chip" id="res-rank">D</span>
+              <span class="record-flag hidden" id="res-best-flag">新纪录</span>
+            </div>
+
+            <div class="result-grid">
+              <div class="result-item"><span>推进波次</span><strong id="res-waves">0 / 5</strong></div>
+              <div class="result-item"><span>击破目标</span><strong id="res-kills">0</strong></div>
+              <div class="result-item"><span>最高连击</span><strong id="res-combo">0</strong></div>
+              <div class="result-item"><span>完成合约</span><strong id="res-contracts">0 / 5</strong></div>
+              <div class="result-item"><span>剩余护盾</span><strong id="res-shield">0</strong></div>
+              <div class="result-item"><span>历史最佳</span><strong id="res-best">0</strong></div>
+            </div>
+
+            <div class="panel-actions">
+              <button class="btn btn-primary" id="btn-again">
+                <span>再来一局</span>
+                <svg class="btn-arrow" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true">
+                  <path d="M4 10h11M10.5 5.5L15 10l-4.5 4.5" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+              </button>
+              <button class="btn btn-ghost" id="btn-stop">停止摄像头</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="toast hidden" id="toast"></div>
+      </section>
+
+      <!-- 图例：把"打谁、怎么打"写在明面上 -->
+      <div class="legend legend-targets">
+        <span class="legend-title">目标图鉴</span>
+        <span class="legend-item item-shard"><i class="speck speck-shard"></i>碎片 <b>撞核 −5</b></span>
+        <span class="legend-item item-armor"><i class="speck speck-armor"></i>装甲 <b>需 2 击</b></span>
+        <span class="legend-item item-seeker"><i class="speck speck-seeker"></i>感染体 <b class="warn">攀附抽能</b></span>
+        <span class="legend-item item-volatile"><i class="speck speck-volatile"></i>爆裂体 <b class="neg">近爆 −14</b></span>
+        <span class="legend-item item-stardust"><i class="speck speck-stardust"></i>星屑 <b class="pos">+35 回能</b></span>
+        <span class="legend-item item-decoy"><i class="speck speck-decoy"></i>诱饵 <b class="neg">打错 −25</b></span>
+        <span class="legend-note">
+          <i class="live-dot" aria-hidden="true"></i>60 FPS target
+        </span>
+      </div>
+    </main>
+
+    <!-- ================= 说明 ================= -->
+    <section class="guide">
+      <div class="guide-head">
+        <div class="eyebrow">
+          <span class="eyebrow-num">02</span>
+          <span class="eyebrow-line" aria-hidden="true"></span>
+          <span class="eyebrow-text">How it works · 玩法与判定</span>
+        </div>
+        <p class="guide-sub">三条手势判定，加上三层资源博弈，构成了这一局。</p>
+      </div>
+
+      <div class="guide-grid">
+        <article class="guide-card">
+          <span class="guide-no">01</span>
+          <h3>捏合 · 比值判定</h3>
+          <p>用「拇指—食指距离 ÷ 手掌尺寸」判断捏合，远近、身高都不影响；0.45 进入、0.65 退出形成滞回，捏住不抖。</p>
+          <span class="guide-tag">归一化 + 滞回</span>
+        </article>
+        <article class="guide-card">
+          <span class="guide-no">02</span>
+          <h3>按住 · 蓄能分层</h3>
+          <p>捏合时长决定攻击类型：0.36 秒内松手是单体脉冲，超过则转成蓄能炮 —— 手上有两种火力，但都要花能量。</p>
+          <span class="guide-tag">时长分档</span>
+        </article>
+        <article class="guide-card">
+          <span class="guide-no">03</span>
+          <h3>张掌 · 冲击波</h3>
+          <p>四指伸展并持续 0.55 秒触发，避免挥手误触。以准星为圆心推开来敌，是对付爆裂体的救援手段。</p>
+          <span class="guide-tag">时长防抖</span>
+        </article>
+        <article class="guide-card">
+          <span class="guide-no">04</span>
+          <h3>资源 · 三层稀缺</h3>
+          <p>护盾只减不回（波间小补），能量自然回复但跟不上乱打，冲击波每波只给一次。三个池子逼你算账。</p>
+          <span class="guide-tag">取舍</span>
+        </article>
+        <article class="guide-card">
+          <span class="guide-no">05</span>
+          <h3>波次 · 渐进难度</h3>
+          <p>五波逐层加压：波内越到后面生成越密，波间敌人不清场只冻结 2.4 秒，压力会一直累积下去。</p>
+          <span class="guide-tag">曲线</span>
+        </article>
+        <article class="guide-card">
+          <span class="guide-no">06</span>
+          <h3>合约 · 每波目标</h3>
+          <p>每波随机给一个附加条件（零误伤 / 铁壁 / 猎手…），达成有额外分。想拿高分，就得打得更讲究。</p>
+          <span class="guide-tag">变数</span>
+        </article>
+      </div>
+    </section>
+
+    <footer class="app-footer">
+      <div class="foot-left">
+        <span class="foot-dot" aria-hidden="true"></span>
+        <span>纯前端实现 · Canvas 2D 渲染 · MediaPipe Hands 手部关键点</span>
+      </div>
+      <div class="foot-right">
+        <span class="foot-chip">LOCAL ONLY</span>
+        <span>所有计算在本机完成，画面不上传</span>
+      </div>
+    </footer>
+  </div>
+</div>
+
+<script src="js/config.js"></script>
+<script src="js/gesture-detector.js"></script>
+<script src="js/game.js"></script>
+<script src="js/app.js"></script>
+</body>
+</html>
